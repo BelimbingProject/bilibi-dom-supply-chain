@@ -7,7 +7,7 @@ approval, amendments and the goods received against them, and the Suppliers
 and Purchase requests, Purchase orders and order detail pages. Other Supply Chain modules read and write
 through this module's facade; none of them reads its tables. This README is the
 owner contract; the Bilimbi source it ports is
-[`purchasing/docs/README.md`](https://github.com/BelimbingApp/b-dom-supply-chain/blob/main/purchasing/docs/README.md).
+[`purchasing/docs/README.md`](https://github.com/BelimbingProject/b-dom-supply-chain/blob/main/purchasing/docs/README.md).
 
 ## Public API
 
