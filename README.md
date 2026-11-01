@@ -1,8 +1,8 @@
 # bilibi-dom-supply-chain
 
-Supply Chain Domain for [Bilibi](https://github.com/BelimbingApp/bilibi):
+Supply Chain Domain for [Bilibi](https://github.com/BelimbingProject/bilibi):
 buying through to delivery, ported with UI parity from Bilimbi's
-[b-dom-supply-chain](https://github.com/BelimbingApp/b-dom-supply-chain). It is
+[b-dom-supply-chain](https://github.com/BelimbingProject/b-dom-supply-chain). It is
 one optional, independently versioned repository that an adopter mounts into a
 Bilibi checkout; it does not build on its own.
 
@@ -23,7 +23,7 @@ Clone this repository into a Bilibi checkout at `apps/domains/supply_chain`
 (a real nested checkout, never a symlink) and work from the Bilibi root:
 
 ```sh
-git clone https://github.com/BelimbingApp/bilibi-dom-supply-chain.git apps/domains/supply_chain
+git clone https://github.com/BelimbingProject/bilibi-dom-supply-chain.git apps/domains/supply_chain
 python3 scripts/discover-modules.py
 cargo run -p bilibi-web -- migrate
 ```
