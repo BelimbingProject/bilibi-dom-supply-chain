@@ -202,9 +202,9 @@ async fn main() -> Result<()> {
     };
     let ops = [op];
     let preview = plans.preview(&authority, &ops).await?;
-    let code = preview["plan_code"]
-        .as_str()
-        .ok_or("agent preview refused")?;
+    if preview["valid"] != true {
+        return Err("agent preview refused".into());
+    }
     let before = p
         .get_order(&admin, company, agent_order.id)
         .await?
@@ -212,9 +212,9 @@ async fn main() -> Result<()> {
     if before.amendment_count != 0 {
         return Err("preview wrote an amendment".into());
     }
-    let result = plans.commit(&admin, &authority, code, &ops).await?;
+    let result = plans.commit(&admin, &authority, &ops).await?;
     println!("Agent commit results={}", result["results"]);
-    if plans.commit(&admin, &authority, code, &ops).await.is_ok() {
+    if plans.commit(&admin, &authority, &ops).await.is_ok() {
         return Err("agent replay unexpectedly succeeded".into());
     }
     let after = p
@@ -227,6 +227,8 @@ async fn main() -> Result<()> {
     {
         return Err("agent amendment result mismatch".into());
     }
-    println!("Agent preview wrote nothing; commit retained six lines and recorded one amendment; replay refused");
+    println!(
+        "Agent preview wrote nothing; commit retained six lines and recorded one amendment; replay refused"
+    );
     Ok(())
 }

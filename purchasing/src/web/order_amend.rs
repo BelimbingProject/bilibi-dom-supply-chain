@@ -23,7 +23,6 @@ const LINE_FIELDS: [(&str, &str); 6] = [
 ];
 struct Review {
     input: Value,
-    code: String,
     response: Value,
     before_columns: ListColumns,
     after_columns: ListColumns,
@@ -161,10 +160,6 @@ impl Editor {
                 }
                 match core.contracts.preview(&call, self.input.clone()).await {
                     Ok(response) if response["valid"] == true => {
-                        let code = response["plan_code"]
-                            .as_str()
-                            .ok_or(Error::Internal)?
-                            .to_owned();
                         self.flash = Flash::default();
                         let preview = &response["results"][0]["preview"]["result"];
                         let before_columns =
@@ -175,7 +170,6 @@ impl Editor {
                             before_columns,
                             after_columns,
                             input: self.input.clone(),
-                            code,
                             response,
                         });
                     }
@@ -186,11 +180,7 @@ impl Editor {
             "amend_commit" => {
                 // Taking the review prevents replay and automatic retry after any outcome.
                 if let Some(review) = self.review.take() {
-                    match core
-                        .contracts
-                        .commit(&call, &review.code, review.input)
-                        .await
-                    {
+                    match core.contracts.commit(&call, review.input).await {
                         Ok(_) => return Ok(true),
                         Err(error) => self.flash.error(operation_error(error)),
                     }
@@ -222,7 +212,7 @@ impl Editor {
                 "amend-review-summary",
                 &json!({
                     "Reason":preview["reason"], "All current lines will be replaced":preview["replaces_all_lines"],
-                    "Fresh approval and sending required":preview["reapproval_required"], "Review expires at":response["expires_at"]
+                    "Fresh approval and sending required":preview["reapproval_required"]
                 }),
                 None,
             )?;
@@ -433,7 +423,7 @@ fn preview_errors(response: &Value) -> String {
             .join(" ");
     }
     match error["code"].as_str() {
-        Some("stale_plan") => "This order changed. Cancel and open a new amendment.".into(),
+        Some("record_changed") => "This order changed. Cancel and open a new amendment.".into(),
         Some("missing_capability") => "You no longer have permission to amend this order.".into(),
         _ => "This amendment cannot be reviewed. Cancel and open the order again.".into(),
     }
@@ -453,11 +443,7 @@ fn operation_error(error: OperationError) -> String {
         OperationError::NotFound | OperationError::Backend(Error::NotFound) => {
             "This order is no longer available.".into()
         }
-        OperationError::StalePlan
-        | OperationError::PlanExpired
-        | OperationError::InvalidPlanCode
-        | OperationError::PlanMismatch
-        | OperationError::PlanAlreadyUsed => {
+        OperationError::Backend(Error::Conflict) => {
             "This review is no longer current. Cancel and open a new amendment.".into()
         }
         _ => "The amendment could not be confirmed. Check the order before trying again.".into(),
