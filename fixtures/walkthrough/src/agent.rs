@@ -1,5 +1,5 @@
 //! H7 running-service specimen on disposable walkthrough data. Real sessions,
-//! registry, plans, facades and audit; never prints credentials or plan codes.
+//! registry, dry runs, facades and audit; never prints credentials.
 use bilibi_agent_api::{
     plans::{PlanAuthority, PlanIdentity, PlannedOperation, Plans},
     Registry,
@@ -51,27 +51,28 @@ fn saved<T>(outcome: Outcome<T>) -> Result<T> {
         .into()),
     }
 }
-fn code(plan: &Value) -> Result<&str> {
-    plan["plan_code"]
-        .as_str()
-        .ok_or("preview did not issue a code".into())
-}
 async fn preview(
     plans: &Plans,
     browser: &Browser<'_>,
     operations: &[PlannedOperation],
 ) -> Result<Value> {
-    let mut plan = plans.preview(browser, operations).await?;
-    let code = plan["plan_code"].take();
-    println!("H7 review: {plan}; code issued={}", code.is_string());
-    plan["plan_code"] = code;
+    let plan = plans.preview(browser, operations).await?;
+    println!("H7 review: {plan}");
     Ok(plan)
 }
 async fn state(db: &Db, id: i64) -> Result<()> {
     let row = db.get().await?.query_one(
         "SELECT status,amendment_count,notes,(SELECT count(*) FROM supply_chain_purchasing_order_lines WHERE order_id=o.id AND superseded_by_amendment_id IS NULL),(SELECT count(*) FROM supply_chain_purchasing_order_amendments WHERE order_id=o.id),(SELECT count(*) FROM base_audit_mutations WHERE auditable_type='supply_chain.purchasing.order_amendment' AND tenant_id=1) FROM supply_chain_purchasing_orders o WHERE tenant_id=1 AND company_id=1 AND id=$1", &[&id],
     ).await?;
-    println!("H7 state: status={} count={} notes={:?} current_lines={} amendments={} tenant_amendment_audits={}", row.get::<_,String>(0), row.get::<_,i32>(1), row.get::<_,Option<String>>(2), row.get::<_,i64>(3), row.get::<_,i64>(4), row.get::<_,i64>(5));
+    println!(
+        "H7 state: status={} count={} notes={:?} current_lines={} amendments={} tenant_amendment_audits={}",
+        row.get::<_, String>(0),
+        row.get::<_, i32>(1),
+        row.get::<_, Option<String>>(2),
+        row.get::<_, i64>(3),
+        row.get::<_, i64>(4),
+        row.get::<_, i64>(5)
+    );
     Ok(())
 }
 
@@ -153,28 +154,28 @@ pub(super) async fn run(
             .await
     );
     state(db, draft.id).await?;
-    let plan = preview(&plans, &browser, &ops).await?;
+    let _review = preview(&plans, &browser, &ops).await?;
     state(db, draft.id).await?;
     println!(
         "H7 header-only commit: {:?}",
-        plans.commit(&manager, &browser, code(&plan)?, &ops).await?
+        plans.commit(&manager, &browser, &ops).await?
     );
     println!(
         "H7 replay: {:?}",
-        plans.commit(&manager, &browser, code(&plan)?, &ops).await
+        plans.commit(&manager, &browser, &ops).await
     );
     state(db, draft.id).await?;
 
     let pair = [operation(1, "2.5", "First"), operation(1, "2.5", "Second")];
-    let plan = preview(&plans, &browser, &pair).await?;
+    let _review = preview(&plans, &browser, &pair).await?;
     println!(
         "H7 duplicate-order atomic rollback: {:?}",
-        plans.commit(&manager, &browser, code(&plan)?, &pair).await
+        plans.commit(&manager, &browser, &pair).await
     );
     state(db, draft.id).await?;
 
     let ops = [operation(1, "2.5", "New tax review")];
-    let plan = preview(&plans, &browser, &ops).await?;
+    let _review = preview(&plans, &browser, &ops).await?;
     saved(
         purchasing
             .update_tax_code(
@@ -190,7 +191,7 @@ pub(super) async fn run(
     )?;
     println!(
         "H7 stale tax review: {:?}",
-        plans.commit(&manager, &browser, code(&plan)?, &ops).await
+        plans.commit(&manager, &browser, &ops).await
     );
     saved(
         purchasing
@@ -207,13 +208,13 @@ pub(super) async fn run(
     )?;
 
     let ops = [operation(1, "2.5", "Permission check")];
-    let plan = preview(&plans, &browser, &ops).await?;
+    let _review = preview(&plans, &browser, &ops).await?;
     grants
         .set_direct(admin, manager.user(), MANAGE_ORDERS, Some(false))
         .await?;
     println!(
         "H7 permission revoked after preview: {:?}",
-        plans.commit(&manager, &browser, code(&plan)?, &ops).await
+        plans.commit(&manager, &browser, &ops).await
     );
     grants
         .set_direct(admin, manager.user(), MANAGE_ORDERS, None)
@@ -230,10 +231,10 @@ pub(super) async fn run(
     preview(&plans, &browser, &[empty]).await?;
 
     let ops = [operation(1, "3.5", "Changed quantity")];
-    let plan = preview(&plans, &browser, &ops).await?;
+    let _review = preview(&plans, &browser, &ops).await?;
     println!(
         "H7 changed-line commit: {:?}",
-        plans.commit(&manager, &browser, code(&plan)?, &ops).await?
+        plans.commit(&manager, &browser, &ops).await?
     );
     println!(
         "H7 own approval: {:?}",
@@ -246,10 +247,10 @@ pub(super) async fn run(
     )?;
     saved(purchasing.send_order(&manager, 1, draft.id).await?)?;
     let ops = [operation(2, "3.5000", "Sent order header")];
-    let plan = preview(&plans, &browser, &ops).await?;
+    let _review = preview(&plans, &browser, &ops).await?;
     println!(
         "H7 sent header-only commit: {:?}",
-        plans.commit(&manager, &browser, code(&plan)?, &ops).await?
+        plans.commit(&manager, &browser, &ops).await?
     );
     state(db, draft.id).await?;
     grants.set_direct(admin, manager.user(), VIEW, None).await?;

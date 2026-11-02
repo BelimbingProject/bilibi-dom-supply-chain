@@ -143,7 +143,7 @@ impl Purchasing {
         .await?
         .ok_or(Error::NotFound)?;
         if count(input)? != current.amendment_count {
-            return Err(Error::StalePlan);
+            return Err(Error::Backend(bilibi_database::Error::Conflict));
         }
         let prepared = order_changes::prepare_amendment(
             client,
@@ -217,7 +217,9 @@ impl WriteHandler for Amend {
             )
             .await
             .map_err(|error| match error {
-                bilibi_database::Error::Conflict => Error::StalePlan,
+                bilibi_database::Error::Conflict => {
+                    Error::Backend(bilibi_database::Error::Conflict)
+                }
                 bilibi_database::Error::NotFound => Error::NotFound,
                 other => other.into(),
             })?;
@@ -268,6 +270,6 @@ inventory::submit! { Contribution::new(DEFINITIONS, "supply_chain/purchasing.age
         key: "supply_chain.purchasing.order", title: "Purchase order amendments",
         summary: "Review and commit amendments from the purchase order page or an agent.",
         keywords: &["purchase", "order", "amendment", "approval"], capability: MANAGE_ORDERS,
-        body: "Use supply_chain.purchasing.order.amend only for approved or sent orders. Supply company_id, order_id, the current expected_amendment_count, a reason and every replacement line. Never infer company wording, currency, units or tax codes. Quantities and unit prices are exact decimal strings. Optional reference, notes and expected_on preserve their current values when omitted; blank clears them. Omitting a line's tax_code_id removes tax. Supplier, currency and request link cannot change.\n\nPreview a plan through /api/v1 or /mcp and obtain the person's consent to the full review before committing its single-use plan code. Direct calls do not write. The review shows normalized header facts, current line identities, resolved tax rates, replacement lines and whether fresh approval is required. Every amendment supersedes all current lines, even when their values are unchanged. Changing any line's description, item reference, quantity, unit, price or tax returns the order to submitted, clears approval and sending, and makes the amender the submitter; someone else approves it. Header-only changes preserve approved/sent status.\n\nPreview is not a reservation: order, tax, company or permission changes can require a fresh review. Do not put two amendments to the same order in one plan: the count precondition refuses the second and rolls back the whole plan. Partially received orders cannot be amended; close them short instead. Refusals change nothing.",
+        body: "Use supply_chain.purchasing.order.amend only for approved or sent orders. Supply company_id, order_id, the current expected_amendment_count, a reason and every replacement line. Never infer company wording, currency, units or tax codes. Quantities and unit prices are exact decimal strings. Optional reference, notes and expected_on preserve their current values when omitted; blank clears them. Omitting a line's tax_code_id removes tax. Supplier, currency and request link cannot change.\n\nPreview through /api/v1 or /mcp, show the full review to the person and wait for explicit approval before writing the same operations. Direct calls do not write. The review shows normalized header facts, current line identities, resolved tax rates, replacement lines and whether fresh approval is required. Every amendment supersedes all current lines, even when their values are unchanged. Changing any line's description, item reference, quantity, unit, price or tax returns the order to submitted, clears approval and sending, and makes the amender the submitter; someone else approves it. Header-only changes preserve approved/sent status.\n\nPreview is not a reservation: order, tax, company or permission changes can require a fresh review. Do not put two amendments to the same order in one write: the count precondition refuses the second and rolls back the whole write. Partially received orders cannot be amended; close them short instead. Refusals change nothing.",
     }],
 }) }
