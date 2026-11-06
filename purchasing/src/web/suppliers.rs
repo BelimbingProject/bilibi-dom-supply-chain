@@ -18,8 +18,8 @@ use bilibi_tenancy::Scope;
 use bilibi_ui::{
     list_state::ParamNames,
     page::{LiveBody, LiveFuture, LiveInput, LiveRequest, LiveState},
-    params, Badge, BadgeKind, Button, ColumnsOutcome, EmptyState, Field, FlashMap, FlexRow, Html,
-    InputKind, ListColumns, ListSpec, ListState, RowMode, SortDir,
+    params, Button, ColumnsOutcome, EmptyState, Field, FlashMap, FlexRow, Html, InputKind,
+    ListColumns, ListSpec, ListState, RowMode, SortDir,
 };
 use serde_json::Value;
 use std::{
@@ -369,7 +369,7 @@ impl Suppliers {
                 .slot("name", Html::text(&supplier.name))
                 .slot("contact", contact)
                 .slot("location", Html::text(&location(supplier)))
-                .slot("state", badge(supplier.active)?);
+                .slot("state", bilibi_ui::active_badge(supplier.active));
             if self.can_configure {
                 row.actions = toggle(
                     &format!("supplier-toggle-{}", supplier.id),
@@ -415,7 +415,7 @@ impl Suppliers {
                 .slot("code", Html::text(&tax_code.code))
                 .slot("name", Html::text(&tax_code.name))
                 .slot("rate", Html::text(&tax_code.rate.to_string()))
-                .slot("state", badge(tax_code.active)?);
+                .slot("state", bilibi_ui::active_badge(tax_code.active));
             if self.can_configure {
                 row.actions = toggle(
                     &format!("tax-code-toggle-{}", tax_code.id),
@@ -483,14 +483,6 @@ fn location(supplier: &Supplier) -> String {
     .flatten()
     .collect::<Vec<_>>()
     .join(", ")
-}
-
-fn badge(active: bool) -> Result<Html> {
-    render(&if active {
-        Badge::status(BadgeKind::Success, "Active")
-    } else {
-        Badge::status(BadgeKind::Neutral, "Inactive")
-    })
 }
 
 fn toggle(dom_id: &str, event: &str, id: i64, active: bool) -> Result<Html> {
