@@ -71,26 +71,23 @@ fn count(input: &Value) -> bilibi_agent_api::Result<i32> {
         .try_into()
         .map_err(|_| bilibi_database::Error::Invalid.into())
 }
-fn text(input: &Value, field: &str) -> String {
-    input[field].as_str().unwrap_or_default().to_owned()
-}
 fn amendment(input: &Value) -> bilibi_agent_api::Result<OrderAmendment> {
     let lines = input["lines"]
         .as_array()
         .ok_or(bilibi_database::Error::Invalid)?;
     Ok(OrderAmendment {
-        reason: text(input, "reason"),
+        reason: bilibi_agent_api::text_field(input, "reason"),
         reference: input["reference"].as_str().map(str::to_owned),
         notes: input["notes"].as_str().map(str::to_owned),
         expected_on: input["expected_on"].as_str().map(str::to_owned),
         lines: lines
             .iter()
             .map(|line| NewOrderLine {
-                description: text(line, "description"),
-                external_item_ref: text(line, "external_item_ref"),
-                quantity: text(line, "quantity"),
-                unit: text(line, "unit"),
-                unit_price: text(line, "unit_price"),
+                description: bilibi_agent_api::text_field(line, "description"),
+                external_item_ref: bilibi_agent_api::text_field(line, "external_item_ref"),
+                quantity: bilibi_agent_api::text_field(line, "quantity"),
+                unit: bilibi_agent_api::text_field(line, "unit"),
+                unit_price: bilibi_agent_api::text_field(line, "unit_price"),
                 tax_code_id: line["tax_code_id"].as_i64(),
             })
             .collect(),
