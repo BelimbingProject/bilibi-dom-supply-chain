@@ -134,7 +134,12 @@ pub(super) async fn run(
             "lines":[{"description":" Bracket ","quantity":quantity,"unit":"pcs","unit_price":"3.2000","tax_code_id":tax.id}]}),
     };
     grants
-        .set_direct(admin, manager.user(), VIEW, Some(false))
+        .set_direct(
+            admin,
+            manager.user(),
+            VIEW,
+            Some(bilibi_authz::grants::Direct::Deny),
+        )
         .await?;
     println!(
         "H7 manage without view: {:?}",
@@ -204,7 +209,12 @@ pub(super) async fn run(
     let ops = [operation(1, "2.5", "Permission check")];
     let _review = preview(&plans, &browser, &ops).await?;
     grants
-        .set_direct(admin, manager.user(), MANAGE_ORDERS, Some(false))
+        .set_direct(
+            admin,
+            manager.user(),
+            MANAGE_ORDERS,
+            Some(bilibi_authz::grants::Direct::Deny),
+        )
         .await?;
     println!(
         "H7 permission revoked after preview: {:?}",

@@ -256,7 +256,12 @@ pub(super) async fn run(
 
     // A revocation takes effect on the same sealed scope (a stale page).
     grants
-        .set_direct(admin, manager.user(), receiving::POST_RECEIPTS, Some(false))
+        .set_direct(
+            admin,
+            manager.user(),
+            receiving::POST_RECEIPTS,
+            Some(bilibi_authz::grants::Direct::Deny),
+        )
         .await?;
     check(
         matches!(
@@ -432,11 +437,21 @@ pub(super) async fn run(
             .await?,
     )?;
     grants
-        .set_direct(admin, manager.user(), buying::RECEIVE_ORDERS, Some(false))
+        .set_direct(
+            admin,
+            manager.user(),
+            buying::RECEIVE_ORDERS,
+            Some(bilibi_authz::grants::Direct::Deny),
+        )
         .await?;
     let rejects = kept(r.post_receipt(manager, COMPANY, rejects.id).await?)?;
     grants
-        .set_direct(admin, manager.user(), buying::VIEW, Some(false))
+        .set_direct(
+            admin,
+            manager.user(),
+            buying::VIEW,
+            Some(bilibi_authz::grants::Direct::Deny),
+        )
         .await?;
     kept(
         r.reverse_receipt(
@@ -492,7 +507,12 @@ pub(super) async fn run(
     )?;
     let blocked = kept(r.post_receipt(manager, COMPANY, blocked.id).await?)?;
     grants
-        .set_direct(admin, manager.user(), buying::RECEIVE_ORDERS, Some(false))
+        .set_direct(
+            admin,
+            manager.user(),
+            buying::RECEIVE_ORDERS,
+            Some(bilibi_authz::grants::Direct::Deny),
+        )
         .await?;
     let before = evidence(db).await?;
     check(
@@ -548,7 +568,12 @@ pub(super) async fn run(
         "superseded line cannot post",
     )?;
     grants
-        .set_direct(admin, manager.user(), buying::VIEW, Some(false))
+        .set_direct(
+            admin,
+            manager.user(),
+            buying::VIEW,
+            Some(bilibi_authz::grants::Direct::Deny),
+        )
         .await?;
     kept(
         r.update_receipt(
