@@ -178,15 +178,17 @@ impl Suppliers {
             .ok_or(Error::Invalid)?;
         match kind {
             "suppliers_grid" => {
-                let outcome = self
-                    .supplier_columns
-                    .handle(&params::string_values(payload));
+                let outcome = self.supplier_columns.handle(
+                    &params::string_values_checked(payload, params::FIELD_LIMIT)
+                        .map_err(bilibi_database::Error::refused)?,
+                );
                 self.columns_outcome(outcome, false)?;
             }
             "tax_codes_grid" => {
-                let outcome = self
-                    .tax_code_columns
-                    .handle(&params::string_values(payload));
+                let outcome = self.tax_code_columns.handle(
+                    &params::string_values_checked(payload, params::FIELD_LIMIT)
+                        .map_err(bilibi_database::Error::refused)?,
+                );
                 self.columns_outcome(outcome, true)?;
             }
             "clear-flash" => {

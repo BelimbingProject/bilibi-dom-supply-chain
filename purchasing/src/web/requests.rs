@@ -206,9 +206,10 @@ impl Requests {
         match kind {
             "requests_grid" => {
                 self.rows_changed = false;
-                if let ColumnsOutcome::Sort(column) =
-                    self.columns.handle(&params::string_values(payload))
-                {
+                if let ColumnsOutcome::Sort(column) = self.columns.handle(
+                    &params::string_values_checked(payload, params::FIELD_LIMIT)
+                        .map_err(bilibi_database::Error::refused)?,
+                ) {
                     if !self.list.next_sort(&column) {
                         return Err(Error::Invalid);
                     }

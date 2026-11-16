@@ -215,8 +215,8 @@ impl ReceiptPage {
     }
     async fn event(&mut self, scope: &Scope, payload: &Value) -> Result<bool> {
         match text(payload, "type") {
-            "lines_grid" => self.lines.event(payload),
-            "history_grid" => self.history.event(payload),
+            "lines_grid" => self.lines.event(payload)?,
+            "history_grid" => self.history.event(payload)?,
             "clear-flash" => self.flash.clear(payload.get("key").and_then(Value::as_str)),
             "dismiss" => self.pending = None,
             kind @ ("transition" | "confirm") => {

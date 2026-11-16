@@ -120,10 +120,14 @@ impl Grid {
             event,
         })
     }
-    pub(super) fn event(&mut self, payload: &Value) {
-        if let ColumnsOutcome::Sort(c) = self.columns.handle(&params::string_values(payload)) {
+    pub(super) fn event(&mut self, payload: &Value) -> bilibi_database::Result<()> {
+        if let ColumnsOutcome::Sort(c) = self.columns.handle(
+            &params::string_values_checked(payload, params::FIELD_LIMIT)
+                .map_err(bilibi_database::Error::refused)?,
+        ) {
             self.list.next_sort(&c);
         }
+        Ok(())
     }
     pub(super) fn params(&mut self, query: &HashMap<String, String>) -> Result<()> {
         self.list = ListState::parse(query, std::sync::Arc::new(self.list.spec().clone()))

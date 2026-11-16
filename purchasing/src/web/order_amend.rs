@@ -137,7 +137,10 @@ impl Editor {
                     } else {
                         &mut review.after_columns
                     };
-                    columns.handle(&params::string_values(payload));
+                    columns.handle(
+                        &params::string_values_checked(payload, params::FIELD_LIMIT)
+                            .map_err(bilibi_database::Error::refused)?,
+                    );
                 }
             }
             "amend_edit" => self.review = None,
