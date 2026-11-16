@@ -67,45 +67,51 @@ pub async fn prepare_rules(url: &str, mode: &str, order_id: Option<i64>) -> Resu
     bilibi_extensions::link();
     let db = bilibi_database::pool(url)?;
     let modules = bilibi_module_registry::discover()?;
-    bilibi_database::migrate(&db, &modules).await?;
     if mode == "prepare" {
+        bilibi_database::migrate(&db, &modules).await?;
         bilibi_walkthrough_fixture::install(&db).await?;
+        bilibi_walkthrough_fixture::set_instance_role(&db, "development").await?;
     }
-    bilibi_walkthrough_fixture::set_instance_role(&db, "development").await?;
     let mut services = Services::default();
     services.provide("bootstrap.database", Arc::new(db.clone()))?;
     services.provide("bootstrap.composition", Arc::new(bilibi_web::composition()))?;
     services.install(&modules)?;
-    bilibi_database::seeds::run(&db, &modules, services.catalog()?, &services).await?;
-    let grants = services.get::<bilibi_authz::grants::Grants>("base/authz.grants")?;
-    grants.reconcile().await?;
+    if mode == "prepare" {
+        bilibi_database::seeds::run(&db, &modules, services.catalog()?, &services).await?;
+        let grants = services.get::<bilibi_authz::grants::Grants>("base/authz.grants")?;
+        grants.reconcile().await?;
+    }
     let auth = services.get::<Authentication>("base/tenancy.authentication")?;
-    let client = db.get().await?;
-    let admin = auth
-        .authenticate(&**client, 1, 4, "rules-source".into())
-        .await?;
-    let role = super::tenant_owner_role(&**client, &admin).await?;
-    drop(client);
-    grants.assign_role(&admin, 1, role, true).await?;
-    let person = services
-        .get::<bilibi_person::PersonService>(bilibi_person::SERVICE)?
-        .create(
-            &admin,
-            &bilibi_person::PersonInput {
-                name: "Rules proof administrator".into(),
-                kind: bilibi_person::PersonKind::Human,
-                email: None,
-                phone: None,
-            },
-        )
-        .await
-        .map_err(|_| bilibi_database::Error::Invalid)?;
-    let users = services.get::<bilibi_user::UserService>("core/user.accounts")?;
-    users
-        .link_person(&admin, 4, person.id)
-        .await
-        .map_err(|_| bilibi_database::Error::Invalid)?;
-    users.set_desk(&admin, 1, person.id.get(), true).await?;
+    // Amendments keep the proof actor and its authority unchanged.
+    if mode == "prepare" {
+        let client = db.get().await?;
+        let admin = auth
+            .authenticate(&**client, 1, 4, "rules-source".into())
+            .await?;
+        let role = super::tenant_owner_role(&**client, &admin).await?;
+        drop(client);
+        let grants = services.get::<bilibi_authz::grants::Grants>("base/authz.grants")?;
+        grants.assign_role(&admin, 1, role, true).await?;
+        let person = services
+            .get::<bilibi_person::PersonService>(bilibi_person::SERVICE)?
+            .create(
+                &admin,
+                &bilibi_person::PersonInput {
+                    name: "Rules proof administrator".into(),
+                    kind: bilibi_person::PersonKind::Human,
+                    email: None,
+                    phone: None,
+                },
+            )
+            .await
+            .map_err(|_| bilibi_database::Error::Invalid)?;
+        let users = services.get::<bilibi_user::UserService>("core/user.accounts")?;
+        users
+            .link_person(&admin, 4, person.id)
+            .await
+            .map_err(|_| bilibi_database::Error::Invalid)?;
+        users.set_desk(&admin, 1, person.id.get(), true).await?;
+    }
     let client = db.get().await?;
     let admin = auth
         .authenticate(&**client, 1, 4, "rules-source".into())
