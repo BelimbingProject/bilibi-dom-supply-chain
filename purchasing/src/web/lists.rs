@@ -51,7 +51,6 @@ pub(super) fn sort<T>(
     });
 }
 
-#[allow(clippy::too_many_arguments)] // one call per table, each naming every part
 pub(super) fn table(
     id: &str,
     caption: &str,
