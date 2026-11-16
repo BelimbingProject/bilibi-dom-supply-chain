@@ -30,7 +30,7 @@ use bilibi_authz::{
     roles::{self, Query, Sort},
 };
 use bilibi_database::{pool, Error, Result};
-use bilibi_module_registry::{verify_composition, Services};
+use bilibi_module_registry::Services;
 use bilibi_ports::{PortError, Ports};
 use bilibi_supply_chain_purchasing::{
     NewOrder, NewOrderLine, NewRequest, NewRequestLine, NewSupplier, NewTaxCode, Order,
@@ -345,11 +345,7 @@ pub async fn run(url: &str) -> Result<()> {
     bilibi_extensions::link();
     let db = pool(url)?;
     let modules = bilibi_module_registry::discover()?;
-    verify_composition(
-        &modules,
-        bilibi_domains::MODULES,
-        bilibi_extensions::MODULES,
-    )?;
+    bilibi_web::verify_composition(&db).await?;
     let migrated = bilibi_database::migrate(&db, &modules).await?;
     println!(
         "mounted Domain modules: {:?}; {} migration(s) applied",
