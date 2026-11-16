@@ -17,6 +17,7 @@
 //! purchasing writes run one at a time. See `README.md`.
 mod agent_operations;
 mod contributions;
+mod follow_up;
 mod order_changes;
 mod order_events;
 mod order_lifecycle;
