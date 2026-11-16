@@ -357,3 +357,11 @@ BILIBI_AMENDMENT_PROOF=disposable cargo run -p bilibi-supply-chain-walkthrough -
 ```
 
 This fixture uses the launcher's `ai@agent.my` administrator, creates a second approver through User's account service, and leaves an approved six-line order for browser checks. It also proves the amendment operation refuses a direct write, previews without changing the order, commits a header-only amendment with all six lines, and refuses replay. Open its printed order path as `ai@agent.my` / `bilibi-dev`; check a missing-reason refusal, cancel an edited draft and a review, then confirm a header amendment. Change a line in a second amendment to verify that the order returns to submitted for someone else to approve. Never run the fixture against a database you intend to keep.
+
+## Tenant follow-up rules
+
+`supply_chain/purchasing.order_approved` is offered as a Rules trigger over `supply_chain_rule_orders` (`id`, `company_id`, `revision`, `status`, `label`, `currency`). `supply_chain.purchasing.order.follow_up` creates a private Core activity on the approved purchase order, using `record_id`, `expected_revision`, `assignee_user_id` and `title`. The operation rechecks `supply-chain.purchasing.view` and `supply-chain.purchasing.followup.manage`, the writable company, current revision and approved status under the source locks. It approves, sends and amends nothing.
+
+The new `rule_revision` column advances on every source-row update, independently of the amendment count. Grant `rules` the two Purchasing keys above, `rules.run.execute` and `core.activity.system.create`, and allow event delivery (`domain-events`). Draft and approve a rule through Base Rules; select the company with a `company_id` condition when needed. The recipient must be active with a desk in the source company. Multiple approval parts share one task for the same source revision, recipient and trimmed title (Platform `apps/core/activity/README.md`, Follow-up operations).
+
+Run the mounted proof on a fresh disposable database with `DATABASE_URL=… ./fixtures/walkthrough/rules-followup.sh` from this Domain. The companion Platform example drives Base Rules, Events and Queue, checks one private task per source revision (including multipart events), and refuses stale revisions and a foreign recipient.
