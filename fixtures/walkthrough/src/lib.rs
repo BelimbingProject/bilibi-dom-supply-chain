@@ -22,6 +22,8 @@
 mod agent;
 mod order_events;
 mod receiving;
+mod rules_source;
+pub use rules_source::prepare_rules;
 
 mod receiving_pages;
 

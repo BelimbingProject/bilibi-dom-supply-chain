@@ -170,7 +170,6 @@ pub(crate) async fn insert_lines(
 
 /// Inserts the order header and returns it; the trigger numbers it and the
 /// status defaults to draft.
-#[allow(clippy::too_many_arguments)]
 pub(crate) async fn insert_header(
     sql: &tokio_postgres::Transaction<'_>,
     tenant: i64,
@@ -319,7 +318,6 @@ impl Stamps {
 
 /// One status transition and its history row, inside a `mutate` closure.
 /// Returns the updated header (its lines are those of `current`).
-#[allow(clippy::too_many_arguments)]
 pub(crate) async fn transition_in(
     sql: &tokio_postgres::Transaction<'_>,
     tenant: i64,
@@ -475,7 +473,6 @@ pub(crate) async fn delete_draft_lines(
 
 /// Updates a draft's header, or applies an amendment's facts with its count,
 /// inside a `mutate` closure.
-#[allow(clippy::too_many_arguments)]
 pub(crate) async fn update_header(
     sql: &tokio_postgres::Transaction<'_>,
     company_id: i64,

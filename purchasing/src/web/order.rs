@@ -100,10 +100,14 @@ impl Grid {
             event,
         })
     }
-    fn event(&mut self, payload: &Value) {
-        if let ColumnsOutcome::Sort(c) = self.columns.handle(&params::string_values(payload)) {
+    fn event(&mut self, payload: &Value) -> Result<()> {
+        if let ColumnsOutcome::Sort(c) = self.columns.handle(
+            &params::string_values_checked(payload, params::FIELD_LIMIT)
+                .map_err(bilibi_database::Error::refused)?,
+        ) {
             self.list.next_sort(&c);
         }
+        Ok(())
     }
     fn table(&self, caption: &str, rows: Vec<FlexRow>, empty: EmptyState) -> Result<Html> {
         table(
@@ -293,9 +297,9 @@ impl OrderPage {
     }
     async fn event(&mut self, scope: &Scope, payload: &Value) -> Result<bool> {
         match text(payload, "type") {
-            "lines_grid" => self.lines.event(payload),
-            "history_grid" => self.history.event(payload),
-            "amendments_grid" => self.amendments.event(payload),
+            "lines_grid" => self.lines.event(payload)?,
+            "history_grid" => self.history.event(payload)?,
+            "amendments_grid" => self.amendments.event(payload)?,
             "clear-flash" => {
                 self.flash.clear(payload.get("key").and_then(Value::as_str));
                 if let Some(editor) = &mut self.amendment {

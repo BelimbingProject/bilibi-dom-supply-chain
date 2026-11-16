@@ -11,6 +11,8 @@ license.workspace = true
 publish = false
 
 [dependencies]
+bilibi-web.workspace = true
+bilibi-person.workspace = true
 bilibi-agent-api.workspace = true
 bilibi-authz.workspace = true
 bilibi-base.workspace = true

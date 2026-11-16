@@ -34,7 +34,8 @@ pub const APPROVE_ORDERS: &str = "supply-chain.purchasing.orders.approve";
 /// Records or reverses goods received against a sent order; Receiving's seam.
 pub const RECEIVE_ORDERS: &str = "supply-chain.purchasing.orders.receive";
 /// Every Purchasing capability; the Tenant Owner role holds them all.
-pub const CAPABILITIES: [&str; 7] = [
+pub const CAPABILITIES: [&str; 8] = [
+    crate::follow_up::MANAGE,
     VIEW,
     CONFIGURE,
     MANAGE_REQUESTS,
@@ -58,8 +59,10 @@ inventory::submit! {
     Module {
         id: MODULE,
         layer: Layer::Domains,
-        dependencies: &["base/agent_api", "base/authz", "base/database", "base/datetime", "base/events", "base/locale", "base/menu", "base/ports", "base/tenancy", "base/ui", "core/company"],
+        dependencies: &["base/party_ids","base/records","base/rules","base/grid","core/activity","base/agent_api", "base/authz", "base/database", "base/datetime", "base/events", "base/locale", "base/menu", "base/ports", "base/tenancy", "base/ui", "core/company"],
         migrations: &[
+
+
             (
                 "supply-chain-purchasing-001-suppliers-tax-codes",
                 include_str!("../migrations/001-suppliers-tax-codes.sql"),
@@ -68,7 +71,8 @@ inventory::submit! {
                 "supply-chain-purchasing-002-requests-orders",
                 include_str!("../migrations/002-requests-orders.sql"),
             ),
-        ],
+        ("supply-chain-purchasing-003-rule-revision", include_str!("../migrations/003-rule-revision.sql")),
+],
         services: &[
             Service {
                 id: SERVICE,
@@ -106,7 +110,7 @@ inventory::submit! {
     Contribution::new(VOCABULARY, "supply_chain/purchasing.vocabulary", provenance!(), &VocabularyContribution {
         domains: &["supply-chain"],
         verbs: &["approve", "receive"],
-        capabilities: &[
+        capabilities: &[C::tenant(crate::follow_up::MANAGE),
             C::tenant(VIEW), C::tenant(CONFIGURE), C::tenant(MANAGE_REQUESTS), C::tenant(APPROVE_REQUESTS),
             C::tenant(MANAGE_ORDERS), C::tenant(APPROVE_ORDERS), C::tenant(RECEIVE_ORDERS),
         ],
