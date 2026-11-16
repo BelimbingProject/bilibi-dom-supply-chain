@@ -69,7 +69,7 @@ inventory::submit! { Contribution::new(DEFINITIONS, "supply_chain/purchasing.fol
 inventory::submit! { Contribution::new(OFFERED_CAPABILITIES, "rules:supply_chain/purchasing", provenance!(), &OfferedCapabilities { principal: "rules", capabilities: &[READ, MANAGE] }) }
 inventory::submit! { Contribution::new(bilibi_agent_api::job::PRINCIPAL_WRITES, KEY, provenance!(), &bilibi_agent_api::job::PrincipalWrite { principals: &["rules"] }) }
 inventory::submit! { Contribution::new(TRIGGERS, EVENT, provenance!(), &Trigger { on: On { event: EVENT, versions: &[1] }, title: "A purchase order is approved", table: TABLE, subject: "/order_id", logical_event: Some("/snapshot_key"), version: "revision" }) }
-inventory::submit! { Contribution::new(ACTIONS, KEY, provenance!(), &Action { title: "Create a follow-up task", table: TABLE, subject: "record_id", version: "expected_revision", records: &[] }) }
+inventory::submit! { Contribution::new(ACTIONS, KEY, provenance!(), &Action { title: "Create a follow-up task", table: TABLE, subject: "record_id", version: "expected_revision", records: &[], approval_capabilities: &[bilibi_activity::MANAGE] }) }
 
 static GRID: GridContribution = GridContribution {
     tables: &[TableDecl::new(TABLE, "Purchase orders", READ,
