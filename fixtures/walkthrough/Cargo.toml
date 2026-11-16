@@ -34,6 +34,3 @@ serde_json.workspace = true
 bilibi-walkthrough-fixture = { path = "../../../../../fixtures/walkthrough" }
 tokio.workspace = true
 tokio-postgres.workspace = true
-
-# Use the host admission boundary before preparing the disposable database.
-bilibi-web.workspace = true
