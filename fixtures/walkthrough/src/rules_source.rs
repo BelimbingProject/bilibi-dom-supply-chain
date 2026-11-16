@@ -1,7 +1,9 @@
 //! Leave a fresh, genuinely approved two-line order for the mounted Rules proof.
 use super::{saved, show};
 use bilibi_database::Result;
-use bilibi_supply_chain_purchasing::{NewOrder, NewOrderLine, NewSupplier, Purchasing};
+use bilibi_supply_chain_purchasing::{
+    NewOrder, NewOrderLine, NewSupplier, OrderAmendment, Purchasing,
+};
 use bilibi_tenancy::Scope;
 pub(super) async fn prepare(purchasing: &Purchasing, manager: &Scope, admin: &Scope) -> Result<()> {
     let supplier = saved(show(
@@ -55,7 +57,7 @@ pub(super) async fn prepare(purchasing: &Purchasing, manager: &Scope, admin: &Sc
 }
 
 /// Prepare only the source records needed by the follow-up proof.
-pub async fn prepare_rules(url: &str) -> Result<()> {
+pub async fn prepare_rules(url: &str, mode: &str, order_id: Option<i64>) -> Result<()> {
     use bilibi_module_registry::Services;
     use bilibi_tenancy::Authentication;
     use std::sync::Arc;
@@ -66,7 +68,9 @@ pub async fn prepare_rules(url: &str) -> Result<()> {
     let db = bilibi_database::pool(url)?;
     let modules = bilibi_module_registry::discover()?;
     bilibi_database::migrate(&db, &modules).await?;
-    bilibi_walkthrough_fixture::install(&db).await?;
+    if mode == "prepare" {
+        bilibi_walkthrough_fixture::install(&db).await?;
+    }
     bilibi_walkthrough_fixture::set_instance_role(&db, "development").await?;
     let mut services = Services::default();
     services.provide("bootstrap.database", Arc::new(db.clone()))?;
@@ -111,5 +115,66 @@ pub async fn prepare_rules(url: &str) -> Result<()> {
         .await?;
     drop(client);
     let purchasing = services.get::<Purchasing>(bilibi_supply_chain_purchasing::SERVICE)?;
-    prepare(&purchasing, &manager, &admin).await
+    if mode == "prepare" {
+        return prepare(&purchasing, &manager, &admin).await;
+    }
+    let id = order_id.ok_or(bilibi_database::Error::Invalid)?;
+    let order = purchasing
+        .get_order(&manager, 1, id)
+        .await?
+        .ok_or(bilibi_database::Error::NotFound)?;
+    let mut lines: Vec<_> = order
+        .lines
+        .iter()
+        .map(|line| NewOrderLine {
+            description: line.description.clone(),
+            external_item_ref: line.external_item_ref.clone().unwrap_or_default(),
+            quantity: line.quantity.to_string(),
+            unit: line.unit.clone(),
+            unit_price: line.unit_price.to_string(),
+            tax_code_id: line.tax_code_id,
+        })
+        .collect();
+    if mode == "reapprove" {
+        lines
+            .first_mut()
+            .ok_or(bilibi_database::Error::Invalid)?
+            .description
+            .push_str(" revised for a separate approval");
+    } else if mode != "amend-header" {
+        return Err(bilibi_database::Error::Invalid);
+    }
+    let amended = saved(show(
+        "supported rules source amendment",
+        purchasing
+            .amend_order(
+                &manager,
+                1,
+                id,
+                &OrderAmendment {
+                    reason: "Logical event identity walkthrough".into(),
+                    reference: Some("Header amended between approval parts".into()),
+                    notes: None,
+                    expected_on: None,
+                    lines,
+                },
+            )
+            .await,
+    ))?;
+    if mode == "amend-header" {
+        if amended.status.as_str() != "approved" {
+            return Err(bilibi_database::Error::Invalid);
+        }
+    } else {
+        if amended.status.as_str() != "submitted" {
+            return Err(bilibi_database::Error::Invalid);
+        }
+        saved(show(
+            "independently approve amended rule source",
+            purchasing
+                .approve_order(&admin, 1, id, "A distinct approval snapshot")
+                .await,
+        ))?;
+    }
+    Ok(())
 }
