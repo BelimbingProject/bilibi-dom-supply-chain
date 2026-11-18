@@ -149,7 +149,7 @@ pub(super) async fn run(
     println!(
         "H7 direct write: {:?}",
         registry
-            .call(&**db.get().await?, &manager, KEY, &ops[0].input)
+            .call(&mut **db.get().await?, &manager, KEY, &ops[0].input)
             .await
     );
     state(db, draft.id).await?;
