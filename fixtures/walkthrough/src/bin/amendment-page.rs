@@ -173,7 +173,7 @@ async fn main() -> Result<()> {
     };
     let registry = services.get::<Registry>("base/agent_api.registry")?;
     if registry
-        .call(&**db.get().await?, &admin, key, &op.input)
+        .call(&mut **db.get().await?, &admin, key, &op.input)
         .await
         .is_ok()
     {
