@@ -59,7 +59,7 @@ inventory::submit! {
     Module {
         id: MODULE,
         layer: Layer::Domains,
-        dependencies: &["base/party_ids","base/records","base/rules","base/grid","core/activity","base/agent_api", "base/authz", "base/database", "base/datetime", "base/events", "base/locale", "base/menu", "base/ports", "base/tenancy", "base/ui", "core/company"],
+        dependencies: &["base/party_ids","base/records","base/watchers","base/grid","core/activity","base/agent_api", "base/authz", "base/database", "base/datetime", "base/events", "base/locale", "base/menu", "base/ports", "base/tenancy", "base/ui", "core/company"],
         migrations: &[
 
 

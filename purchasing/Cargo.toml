@@ -12,7 +12,7 @@ publish = false
 [dependencies]
 bilibi-party-ids.workspace = true
 bilibi-records.workspace = true
-bilibi-rules.workspace = true
+bilibi-watchers.workspace = true
 bilibi-grid.workspace = true
 bilibi-activity.workspace = true
 askama.workspace = true
