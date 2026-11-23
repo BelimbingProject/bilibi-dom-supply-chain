@@ -12,9 +12,10 @@ use bilibi_supply_chain_purchasing::{
     NewOrder, NewOrderLine, NewSupplier, NewTaxCode, Outcome, Purchasing, SERVICE,
 };
 use bilibi_tenancy::{ProofFuture, Scope};
-use bilibi_user::{AccountInput, UserService};
+use bilibi_user::{InvitationInput, UserService};
 use serde_json::json;
 use std::sync::Arc;
+use std::time::Duration;
 use tokio_postgres::Transaction;
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 struct Browser<'a> {
@@ -37,6 +38,49 @@ fn saved<T>(outcome: Outcome<T>) -> Result<T> {
         Outcome::Refused(reason) => Err(reason.text().into()),
         _ => Err("company archived".into()),
     }
+}
+async fn invited_account(
+    services: &Services,
+    users: &UserService,
+    admin: &Scope,
+    name: &str,
+    email: &str,
+) -> Result<i64> {
+    let mailer = services.get::<bilibi_mail::Mailer>(bilibi_mail::SERVICE)?;
+    let mailbox = mailer
+        .dev_mailbox()
+        .ok_or("development mailbox unavailable")?;
+    let before = mailbox.entries()?.len();
+    let invitation = users
+        .invite_member(
+            admin,
+            &InvitationInput {
+                name: name.into(),
+                email: email.into(),
+                roles: Vec::new(),
+            },
+        )
+        .await?;
+    for _ in 0..50 {
+        let entries = mailbox.entries()?;
+        if entries.len() > before {
+            let message = mailbox.read(&entries.first().ok_or("invitation mail missing")?.id)?;
+            let token = message
+                .lines()
+                .find(|line| line.starts_with("http"))
+                .and_then(|link| link.rsplit('/').next())
+                .filter(|token| token.len() == 64)
+                .ok_or("invitation token missing")?;
+            let accepted = users
+                .accept_new_member_invitation(token, "bilibi-dev")
+                .await?;
+            return (accepted == invitation.user)
+                .then_some(accepted)
+                .ok_or_else(|| "invitation accepted another account".into());
+        }
+        tokio::time::sleep(Duration::from_millis(100)).await;
+    }
+    Err("invitation mail did not arrive".into())
 }
 async fn approved(
     p: &Purchasing,
@@ -104,17 +148,14 @@ async fn main() -> Result<()> {
         .current_company()
         .ok_or("administrator needs a company")?
         .get();
-    let approver = users
-        .create_account(
-            &admin,
-            &AccountInput {
-                name: "Amendment approver".into(),
-                email: "amendment-approver@example.test".into(),
-                password: "bilibi-dev".into(),
-                ..AccountInput::default()
-            },
-        )
-        .await?;
+    let approver = invited_account(
+        &services,
+        &users,
+        &admin,
+        "Amendment approver",
+        "amendment-approver@example.test",
+    )
+    .await?;
     let role: i64 = db
         .get()
         .await?
@@ -126,7 +167,7 @@ async fn main() -> Result<()> {
         .get(0);
     services
         .get::<Grants>("base/authz.grants")?
-        .assign_role(&admin, approver.id, role, true)
+        .assign_role(&admin, approver, role, true)
         .await?;
     let second = users
         .login("amendment-approver@example.test", "bilibi-dev")
